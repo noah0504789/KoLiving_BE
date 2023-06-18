@@ -12,6 +12,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -86,8 +87,17 @@ class ConfirmationTokenServiceTest {
     }
 
     @Test
-    void createToken() {
+    @DisplayName("createToken() : 올바른 email 형식")
+    void createToken_success() {
+        String testMail = "new@test.com";
+        ConfirmationToken result = confirmationTokenService.createToken(testMail);
+
+        assertNotNull(result);
+        assertEquals(testMail, result.getEmail());
     }
+
+    // createToken_failure() 생략
+    // 컨트롤러 단에서 Java Bean Validation 기술을 사용한 유효성 검사를 수행하므로 검증 로직이 없음
 
     @Test
     void saveToken() {

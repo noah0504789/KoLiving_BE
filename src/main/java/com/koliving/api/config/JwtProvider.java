@@ -2,10 +2,13 @@ package com.koliving.api.config;
 
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.ExpiredJwtException;
-import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.MalformedJwtException;
 import io.jsonwebtoken.SignatureAlgorithm;
+import io.jsonwebtoken.SignatureException;
+import io.jsonwebtoken.UnsupportedJwtException;
 import jakarta.xml.bind.DatatypeConverter;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
@@ -15,8 +18,9 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 
+@Slf4j
 @Component
-public class JwtUtil {
+public class JwtProvider {
 
     @Value("${jwt.secret}")
     private String secret;
@@ -24,7 +28,7 @@ public class JwtUtil {
     @Value("${jwt.expiration:24}")
     private long expiration;
 
-    public String generate(JwtVo jwtVo) {
+    public String generateToken(JwtVo jwtVo) {
         Map<String, Object> headers = new HashMap<>();
         headers.put("typ", "JWT");
         headers.put("alg", "HS256");
@@ -62,24 +66,32 @@ public class JwtUtil {
         return jwt;
     }
 
-    public boolean validate(String token) {
-        Claims claims = null;
-        try {
-            byte[] apiKeySecretBytes = DatatypeConverter.parseBase64Binary(secret);
+    public boolean validateToken(String token) {
+        byte[] apiKeySecretBytes = DatatypeConverter.parseBase64Binary(secret);
 
+        try {
             // 토큰에서 페이로드(Claim) 추출
-            claims = Jwts.parser()
-                    .setSigningKey(apiKeySecretBytes)
-                    .parseClaimsJws(token)
-                    .getBody();
+            // 토큰의 유효성 검증 목적
+            Jwts.parser()
+                .setSigningKey(apiKeySecretBytes)
+                .parseClaimsJws(token)
+                .getBody();
 
             return true;
         } catch (ExpiredJwtException e) {
-            // TODO: 토큰 만료
-        } catch (JwtException e) {
-            // TODO: 유효하지 않은 토큰
-        } catch (Exception e){
-            // TODO: 기타
+            log.error("access token has expired");
+            throw new ExpiredJwtException(null, null, "access token has expired");
+        } catch (MalformedJwtException e) {
+            log.error("malformed jwt token");
+            throw new MalformedJwtException("malformed jwt token");
+        } catch (SignatureException e){
+            log.error("signature validation failed");
+            throw new SignatureException("signature validation failed");
+        } catch (UnsupportedJwtException e){
+            log.error("unexpected format of jwt token");
+            throw new UnsupportedJwtException("unexpected format of jwt token");
+        } catch (Exception e) {
+
         }
 
         return false;

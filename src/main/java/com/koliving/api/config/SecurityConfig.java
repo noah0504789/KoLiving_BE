@@ -10,6 +10,9 @@ import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+import org.springframework.web.filter.CorsFilter;
 
 @Configuration
 public class SecurityConfig {
@@ -39,11 +42,6 @@ public class SecurityConfig {
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         String rootPath = String.format("/api/%s", currentVersion);
 
-        http.authorizeRequests()
-                // TODO : Add more specific path (No need to authenticate)
-                .requestMatchers(rootPath + "/signup/**").permitAll()
-                .anyRequest().authenticated();
-
         http
             .formLogin().disable()
             .httpBasic().disable();
@@ -51,7 +49,29 @@ public class SecurityConfig {
         http.csrf().disable()
             .sessionManagement().sessionCreationPolicy(SessionCreationPolicy.STATELESS);
 
+        http
+            .addFilter(corsFilter())
+            .authorizeRequests()
+                // TODO : Add more specific path (No need to authenticate)
+                .requestMatchers(rootPath + "/signup/**").permitAll()
+            .anyRequest().authenticated();
+
         return http.build();
+    }
+
+    @Bean
+    public CorsFilter corsFilter() {
+        String rootPath = String.format("/api/%s", currentVersion);
+
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        CorsConfiguration config = new CorsConfiguration();
+        config.setAllowCredentials(true);
+        config.addAllowedOrigin("*");
+        config.addAllowedHeader("*");
+        config.addAllowedMethod("*");
+        source.registerCorsConfiguration(rootPath + "/**", config);
+
+        return new CorsFilter(source);
     }
 
     @Bean

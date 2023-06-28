@@ -76,15 +76,6 @@ public class JwtProvider {
                 .compact();
     }
 
-    @Transactional
-    public String saveRefreshToken(String email) {
-        RefreshToken newRefreshToken = RefreshToken.builder()
-                .email(email)
-                .build();
-
-        return refreshTokenRepository.save(newRefreshToken).getRefreshToken();
-    }
-
     public boolean validateAccessToken(String token) {
         byte[] apiKeySecretBytes = DatatypeConverter.parseBase64Binary(secret);
 
@@ -114,23 +105,6 @@ public class JwtProvider {
         }
 
         return false;
-    }
-
-    public Authentication getAuthentication(String token) {
-        UserDetails userDetails = userService.loadUserByUsername(this.getEmail(token));
-        return new UsernamePasswordAuthenticationToken(userDetails, "", userDetails.getAuthorities());
-    }
-
-    public String getEmail(String token) {
-        Claims claim = getClaimsFormToken(token);
-        return (String) claim.get("email");
-    }
-
-    private Claims getClaimsFormToken(String token) {
-        return Jwts.parser()
-                .setSigningKey(DatatypeConverter.parseBase64Binary(secret))
-                .parseClaimsJws(token)
-                .getBody();
     }
 
     private JwtBuilder generateJwtBuilder(Map<String, Object> payloads) {

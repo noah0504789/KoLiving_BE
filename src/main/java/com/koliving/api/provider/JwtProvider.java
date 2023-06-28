@@ -1,10 +1,12 @@
 package com.koliving.api.provider;
 
+import com.koliving.api.clock.IClock;
 import com.koliving.api.token.refresh.RefreshToken;
 import com.koliving.api.token.refresh.RefreshTokenRepository;
 import com.koliving.api.vo.JwtVo;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.ExpiredJwtException;
+import io.jsonwebtoken.JwtBuilder;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.MalformedJwtException;
 import io.jsonwebtoken.SignatureAlgorithm;
@@ -22,6 +24,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 import javax.crypto.spec.SecretKeySpec;
 import java.security.Key;
+import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
@@ -30,26 +34,19 @@ import java.util.Map;
 @Component
 public class JwtProvider {
 
-    private String secret;
+    private String jwtSecret;
     private long expiration;
-    private final UserDetailsService userService;
-    private final RefreshTokenRepository refreshTokenRepository;
+    private IClock clock;
 
-    public JwtProvider(@Value("${jwt.secret}") String secret,
+    public JwtProvider(@Value("${jwt.secret}") String jwtSecret,
                        @Value("${jwt.expiration:24}") long expiration,
-                       UserDetailsService userService,
-                       RefreshTokenRepository refreshTokenRepository) {
-        this.secret=secret;
-        this.userService = userService;
+                       IClock clock) {
+        this.jwtSecret=jwtSecret;
         this.expiration = expiration;
-        this.refreshTokenRepository = refreshTokenRepository;
+        this.clock = clock;
     }
 
     public String generateAccessToken(JwtVo jwtVo) {
-        Map<String, Object> headers = new HashMap<>();
-        headers.put("typ", "JWT");
-        headers.put("alg", "HS256");
-
         String email = jwtVo.getEmail();
         String role = jwtVo.getRole();
         String username = jwtVo.getUsername();
@@ -58,29 +55,17 @@ public class JwtProvider {
         payloads.put("email", email);
         payloads.put("role", role);
 
-        Date createdAt = new Date();
-        Date expiredAt = new Date();
+        LocalDateTime now = clock.now();
+        Date expiredAt = Date.from(now.toInstant(ZoneOffset.UTC));
 
         // 유효 기간 = ms * sec * min * {hour}
-        Long validity = 1000 * 60L * 60L * expiration;
-        expiredAt.setTime(createdAt.getTime() + validity);
+        Long validityTime = 1000 * 60L * 60L * expiration;
+        expiredAt.setTime(expiredAt.getTime() + validityTime);
 
-        SignatureAlgorithm signatureAlgorithm = SignatureAlgorithm.HS256;
-
-        // 서명에 담을 데이터
-        byte[] apiKeySecretBytes = DatatypeConverter.parseBase64Binary(secret);
-        Key signKey = new SecretKeySpec(apiKeySecretBytes, signatureAlgorithm.getJcaName());
-
-        String jwt = Jwts.builder()
-                .setSubject("user-auth " + username)
-                .setHeader(headers)
-                .setClaims(payloads)
-                .setIssuedAt(createdAt)
+        return generateJwtBuilder(payloads)
+                .setSubject("Access Token (" + username + ")")
                 .setExpiration(expiredAt)
-                .signWith(signatureAlgorithm, signKey)
                 .compact();
-
-        return jwt;
     }
 
     @Transactional
@@ -138,5 +123,26 @@ public class JwtProvider {
                 .setSigningKey(DatatypeConverter.parseBase64Binary(secret))
                 .parseClaimsJws(token)
                 .getBody();
+    }
+
+    private JwtBuilder generateJwtBuilder(Map<String, Object> payloads) {
+        Map<String, Object> headers = new HashMap<>();
+        headers.put("typ", "JWT");
+        headers.put("alg", "HS256");
+
+        LocalDateTime now = clock.now();
+        Date createdAt = Date.from(now.toInstant(ZoneOffset.UTC));
+
+        SignatureAlgorithm signatureAlgorithm = SignatureAlgorithm.HS256;
+
+        // 서명에 담을 데이터
+        byte[] apiKeySecretBytes = DatatypeConverter.parseBase64Binary(jwtSecret);
+        Key signKey = new SecretKeySpec(apiKeySecretBytes, signatureAlgorithm.getJcaName());
+
+        return Jwts.builder()
+                .setHeader(headers)
+                .setClaims(payloads)
+                .setIssuedAt(createdAt)
+                .signWith(signatureAlgorithm, signKey);
     }
 }

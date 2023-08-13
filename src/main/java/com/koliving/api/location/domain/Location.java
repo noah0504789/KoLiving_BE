@@ -21,9 +21,16 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 @Getter
+<<<<<<< HEAD
 @Entity(name = "TB_LOCATION")
 @EqualsAndHashCode(of = "id")
 @NoArgsConstructor(access = PROTECTED)
+=======
+@Entity
+@EqualsAndHashCode(of = "id")
+@NoArgsConstructor(access = PROTECTED)
+@Table(name = "LOCATION")
+>>>>>>> 229b055... [feature/location] 지역 API
 public class Location {
 
     @Id

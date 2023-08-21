@@ -9,8 +9,8 @@ import com.koliving.api.auth.login.LoginFailureHandler;
 import com.koliving.api.auth.login.LoginFilter;
 import com.koliving.api.auth.login.LoginProvider;
 import com.koliving.api.auth.login.LoginSuccessHandler;
+import com.koliving.api.utils.HttpUtils;
 import jakarta.annotation.PostConstruct;
-import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.MessageSource;
@@ -35,6 +35,8 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
+import java.util.List;
+
 @EnableWebSecurity
 @Configuration
 @RequiredArgsConstructor
@@ -56,6 +58,7 @@ public class SecurityConfig {
     private final SimpleUrlLogoutSuccessHandler logoutSuccessHandler;
     private final AuthenticationEntryPoint authenticationEntryPoint;
     private final AccessDeniedHandler accessDeniedHandler;
+    private final HttpUtils httpUtils;
 
     @Value("${server.current-version}")
     private String apiVersion;
@@ -141,7 +144,7 @@ public class SecurityConfig {
     }
 
     private CustomExceptionHandlerFilter createExceptionHandlerFilter() {
-        return new CustomExceptionHandlerFilter(objectMapper, messageSource, localeResolver);
+        return new CustomExceptionHandlerFilter(httpUtils, messageSource, localeResolver);
     }
 
     private LoginFilter createLoginFilter(AuthenticationManager authenticationManager) {
@@ -155,6 +158,6 @@ public class SecurityConfig {
     }
 
     private JwtAuthenticationFilter createJwtAuthenticationFilter() {
-        return new JwtAuthenticationFilter(jwtProvider, jwtService);
+        return new JwtAuthenticationFilter(jwtProvider, jwtService, httpUtils);
     }
 }

@@ -24,6 +24,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.inject.Provider;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.modelmapper.ModelMapper;
@@ -74,7 +75,7 @@ public class AuthController {
                     schema = @Schema(implementation = ResponseDto.class),
                     examples = {
                         @ExampleObject(name = "Invalid input of email", value = "{\"responseCode\":400,\"error\":{\"errors\":[{\"objectName\":\"signUpDto\",\"field\":\"email\",\"code\":\"Email\",\"message\":\"not a well-formed email address\"}]}}"),
-                        @ExampleObject(name = "Mismatched input of passwords", value = "{\"responseCode\": 400, \"error\": \"This email already exists : existent@koliving.com\"}")
+                        @ExampleObject(name = "Mismatched input of passwords", value = "{\"responseCode\": 302, \"error\": \"This email already exists : existent@koliving.com\"}")
                     }
                 )
             ),
@@ -100,7 +101,7 @@ public class AuthController {
                 headers = {@Header(name = "Location", schema = @Schema(type = "string", example = "/api/{current-version}/auth/password"))},
                 content = @Content(
                     schema = @Schema(implementation = ResponseDto.class),
-                    examples = {@ExampleObject(name = "Success", value = "{\"responseCode\": 302, \"data\": \"Success email confirmation for sign-up : test@koliving.com\"}"),}
+                    examples = {@ExampleObject(name = "Success", value = "{\"responseCode\": 302, \"data\": \"email confirmation for sign-up success : test@koliving.com\"}"),}
                 )
             ),
             @ApiResponse(responseCode = "400", description = "이메일 인증 실패 - 유효하지 않은 토큰",
@@ -134,7 +135,7 @@ public class AuthController {
         userService.save(newUser);
 
         return httpUtils.createResponseEntityWithRedirect(
-                httpUtils.createSuccessResponse("Success email confirmation for sign-up : " + email, found.value()),
+                httpUtils.createSuccessResponse("email confirmation success for sign-up : " + email, found.value()),
                 httpUtils.getCurrentVersionUri("auth/password")
         );
     }
@@ -143,16 +144,10 @@ public class AuthController {
     @Operation(
         summary = "sign-up password API", description = "회원가입 - 2. 비밀번호 입력 API",
         parameters = {
-            @Parameter(name = "email", required = true, description = "User's email", example = "test@koliving.com")
+            @Parameter(name = "email", required = true, description = "User's email", example = "koliving@gmail.com")
         },
         responses = {
-            @ApiResponse(responseCode = "302", description = "비밀번호 설정 성공",
-                headers = {@Header(name = "Location", schema = @Schema(type = "string", example = "/api/{current-version}/auth/profile"))},
-                content = @Content(
-                    schema = @Schema(implementation = ResponseDto.class),
-                    examples = {@ExampleObject(name = "Success", value = "{\"responseCode\": 302, \"data\": \"Success password setting for sign-up : test@koliving.com\"}"),}
-                )
-            ),
+            @ApiResponse(responseCode = "204", description = "비밀번호 설정 성공", content = @Content(schema = @Schema(hidden = true))),
             @ApiResponse(responseCode = "400", description = "유효하지 않은 비밀번호 입력값",
                 content = @Content(
                     schema = @Schema(implementation = ResponseDto.class),
@@ -164,17 +159,14 @@ public class AuthController {
     public ResponseEntity setPassword(final @Valid @RequestBody PasswordDto passwordDto, @RequestParam("email") @Parameter(hidden = true) User user) {
         userService.setPassword(user, passwordDto.password());
 
-        return httpUtils.createResponseEntityWithRedirect(
-                httpUtils.createSuccessResponse("Success password setting for sign-up : " + user.getEmail(), found.value()),
-                httpUtils.getCurrentVersionUri("auth/profile")
-        );
+        return new ResponseEntity<>(noContent);
     }
 
     @PostMapping("/profile")
     @Operation(
         summary = "sign-up profile API", description = "회원가입 - 3. 개인정보 입력 API",
         parameters = {
-            @Parameter(name = "email", required = true, description = "User's email", example = "test@koliving.com")
+            @Parameter(name = "email", required = true, description = "User's email", example = "koliving@gmail.com")
         },
         responses = {
             @ApiResponse(responseCode = "201", description = "회원가입 성공",
@@ -239,7 +231,7 @@ public class AuthController {
                 headers = {@Header(name = "Location", schema = @Schema(type = "string", example = "/api/{current-version}/auth/reset-password"))},
                 content = @Content(
                     schema = @Schema(implementation = ResponseDto.class),
-                    examples = {@ExampleObject(name = "Success", value = "{\"responseCode\": 302, \"data\": \"Success email confirmation for reset-password : test@koliving.com\"}"),}
+                    examples = {@ExampleObject(name = "Success", value = "{\"responseCode\": 302, \"data\": \"email confirmation success for reset-password : test@koliving.com\"}"),}
                 )
             ),
             @ApiResponse(responseCode = "400", description = "이메일 인증 실패 - 유효하지 않은 토큰",
@@ -257,17 +249,17 @@ public class AuthController {
                 content = @Content(
                     schema = @Schema(implementation = ResponseDto.class),
                     examples = {
-                        @ExampleObject(name = "Email authentication completed", value = "{\"responseCode\":401,\"error\":{\"errorMessage\" :\"The confirmation token already confirmed\",\"email\":\"test@koliving.com\"}}"),
+                            @ExampleObject(name = "Email authentication completed", value = "{\"responseCode\":401,\"error\":{\"errorMessage\" :\"The confirmation token already confirmed\",\"email\":\"test@koliving.com\"}}"),
                     }
                 )
             )
         }
     )
-    public ResponseEntity<ResponseDto<String>> checkAuthEmailForResetPassword(@RequestParam String token, @RequestParam String email) {
+    public ResponseEntity<ResponseDto<String>> checkAuthEmailForResetPassword(@RequestParam String token, @RequestParam String email, HttpServletRequest request) {
         authFacade.checkAuthMail(token, email);
 
         return httpUtils.createResponseEntityWithRedirect(
-                httpUtils.createSuccessResponse("Success email confirmation for reset-password : " + email, found.value()),
+                httpUtils.createSuccessResponse("email confirmation success for reset-password : " + email, found.value()),
                 httpUtils.getCurrentVersionUri("auth/reset-password")
         );
     }
@@ -276,7 +268,7 @@ public class AuthController {
     @Operation(
         summary = "reset password API", description = "회원 수정 (비밀번호 재설정) - 3. 비밀번호 재설정 API",
         parameters = {
-            @Parameter(name = "email", required = true, description = "User's email", example = "test@koliving.com")
+            @Parameter(name = "email", required = true, description = "User's email", example = "koliving@gmail.com")
         },
         responses = {
             @ApiResponse(responseCode = "204", description = "비밀번호 설정 성공", content = @Content(schema = @Schema(hidden = true))),

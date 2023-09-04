@@ -96,6 +96,7 @@ public class SecurityConfig {
             .authorizeHttpRequests(req -> {
                 req
                     .requestMatchers(AntPathRequestMatcher.antMatcher("/h2-console/**")).permitAll()
+                    .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                     .requestMatchers(AUTHENTICATION_WHITELIST).permitAll()
                     .requestMatchers(AUTHORIZATION_WHITELIST).permitAll()
                     .anyRequest().authenticated();

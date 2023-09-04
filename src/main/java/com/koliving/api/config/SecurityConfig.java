@@ -36,6 +36,8 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 import java.util.List;
 
+import static org.springframework.security.config.Customizer.withDefaults;
+
 @EnableWebSecurity
 @Configuration
 @RequiredArgsConstructor
@@ -84,8 +86,7 @@ public class SecurityConfig {
         LoginFilter loginFilter = createLoginFilter(authenticationManager);
         JwtAuthenticationFilter jwtAuthenticationFilter = createJwtAuthenticationFilter();
 
-        http.cors().configurationSource(corsConfigurationSource())
-            .and()
+        http.cors(withDefaults())
             .headers()
             .frameOptions().disable()
             .and()

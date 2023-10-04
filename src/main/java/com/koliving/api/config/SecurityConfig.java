@@ -69,7 +69,6 @@ public class SecurityConfig {
     private void init() {
         AUTHENTICATION_WHITELIST = new String[]{
             httpUtils.getCurrentVersionPath("auth/**"),
-            httpUtils.getCurrentVersionPath("management/**"),
             "/api-docs/**",
             "/swagger-ui/**",
             "/swagger-resources/**"
@@ -100,9 +99,9 @@ public class SecurityConfig {
             .headers()
             .frameOptions().disable()
             .and()
+            .csrf().disable()
             .formLogin(AbstractHttpConfigurer::disable)
             .httpBasic(AbstractHttpConfigurer::disable)
-            .csrf().disable()
             .sessionManagement((session) -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(req -> {
                 req
@@ -145,7 +144,7 @@ public class SecurityConfig {
     @Bean
     CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOriginPatterns(Arrays.asList("*"));
+        configuration.setAllowedOriginPatterns(Arrays.asList("http://localhost:3000", "http://koliving.kro.kr"));
         configuration.setAllowedMethods(Arrays.asList("*"));
         configuration.setAllowedHeaders(Arrays.asList("*"));
         configuration.setAllowCredentials(true);
